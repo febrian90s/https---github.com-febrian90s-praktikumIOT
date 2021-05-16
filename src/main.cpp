@@ -6,6 +6,7 @@
 const char* WIFI_SSID = "realme 6";
 const char* WIFI_PASS = "";
 const char* HOSTNAME = "TestESP";
+#define PIN_RELAY 32
 
 OneWire oneWire(4);
 DallasTemperature sensors(&oneWire);
@@ -31,8 +32,27 @@ float getAmbientTemperature()
   }
 }
 
+
+void setRelay(bool state)
+{
+  digitalWrite(PIN_RELAY, state);
+  Serial.print("Relay state changed to: "); 
+  Serial.print(state);
+  Serial.println();
+}
+
+bool getRelay()
+{
+  bool state = digitalRead(PIN_RELAY);
+  Serial.print("Relay state is: "); 
+  Serial.print(state);
+  Serial.println();
+  return state;
+}
+
 void setup() {
   Serial.begin(115200);
+  pinMode(PIN_RELAY,OUTPUT);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
