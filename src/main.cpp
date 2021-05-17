@@ -9,6 +9,8 @@ const char* HOSTNAME = "TestESP";
 
 OneWire oneWire(4);
 DallasTemperature sensors(&oneWire);
+WiFiClient net;
+MQTTClient iot;
 
 float getAmbientTemperature()
 {
@@ -33,6 +35,7 @@ float getAmbientTemperature()
 
 void setup() {
   Serial.begin(115200);
+  pinMode()
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -44,7 +47,7 @@ void setup() {
     Serial.print(".");
     delay(1000);
   }
-  Serial.println("");
+  Serial.println("Febrian Eibim,Arya Aditya,Joao Baptista");
   Serial.println("WiFi connected successfully.");
 
   sensors.begin();
@@ -55,4 +58,4 @@ void loop() {
   // put your main code here, to run repeatedly:
   float suhu = getAmbientTemperature();
   delay(3000);
-}
+} 
