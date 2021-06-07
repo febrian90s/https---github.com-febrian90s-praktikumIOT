@@ -2,15 +2,21 @@
 #include <WiFi.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <MQTT.h>
+
 
 const char* WIFI_SSID = "realme 6";
-const char* WIFI_PASS = "";
-const char* HOSTNAME = "TestESP";
+const char* WIFI_PASS = "0987654321";
+const char* HOSTNAME = "KELOMPOK2";
+const char* IOTBROKER = "public.cloud.shiftr.io";
+#define PIN_RELAY 32
+
 
 OneWire oneWire(4);
 DallasTemperature sensors(&oneWire);
 WiFiClient net;
 MQTTClient iot;
+
 
 float getAmbientTemperature()
 {
@@ -18,7 +24,9 @@ float getAmbientTemperature()
   sensors.requestTemperatures();
   Serial.println("DONE");
 
+
   float tempC = sensors.getTempCByIndex(0);
+
 
   if(tempC != DEVICE_DISCONNECTED_C) 
   {
@@ -33,9 +41,73 @@ float getAmbientTemperature()
   }
 }
 
+
+
+
+void setRelay(bool state)
+{
+  digitalWrite(PIN_RELAY, state);
+  Serial.print("Relay state changed to: ");
+  Serial.print(state);
+  Serial.println();
+}
+
+
+bool getRelay()
+{
+  bool state = digitalRead(PIN_RELAY);
+  Serial.print("Relay state is: ");
+  Serial.print(state);
+  Serial.println();
+  return state;
+}
+
+
+void messageReceived(String &topic, String &payload)
+{
+  Serial.println("Incomming: " + topic + " - " + payload);
+
+
+  if(topic == "undiknas/ti/kelompok2/relay")
+  {
+    if(payload == "on")
+    {
+      setRelay(1);
+    }
+    else
+    {
+      setRelay(0);
+    }
+  }
+}
+
+
+void iotConnect()
+{
+  Serial.print("Checking WiFi");
+  while(WiFi.status() != WL_CONNECTED) 
+  {
+    Serial.print(".");
+    delay(1000);
+  }
+  Serial.println("");
+
+
+  Serial.print("Connecting to IoT Broker");
+  while(!iot.connect("ESP32", "public", "public")) 
+  {
+    Serial.print(".");
+    delay(1000);
+  }
+  Serial.println("");
+  Serial.println("IoT broker connected successfully.");
+}
+
+
 void setup() {
   Serial.begin(115200);
-  pinMode()
+  pinMode(PIN_RELAY, OUTPUT);
+
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -47,15 +119,58 @@ void setup() {
     Serial.print(".");
     delay(1000);
   }
-  Serial.println("Febrian Eibim,Arya Aditya,Joao Baptista");
+  Serial.println("");
   Serial.println("WiFi connected successfully.");
+
 
   sensors.begin();
 
+
+  iot.begin(IOTBROKER, net);
+  iot.onMessage(messageReceived);
+  iotConnect();
+  iot.subscribe("undiknas/ti/kelompok2/relay");
+  iot.subscribe("undiknas/ti/+/chatroom");
 }
 
+
+unsigned long intervalCounterRelay = 0;
+unsigned long intervalCounterSensor = 0;
+unsigned long intervalCounterIoTConnect = 0;
 void loop() {
+  unsigned long now = millis();
   // put your main code here, to run repeatedly:
-  float suhu = getAmbientTemperature();
-  delay(3000);
-} 
+  if((now - intervalCounterIoTConnect) > 10000)
+  {
+    {
+      if(!iot.connected())
+      {
+        iotConnect(); 
+      }
+      intervalCounterIoTConnect = now;
+    }
+  }
+
+
+  if( (now - intervalCounterRelay) > 1000)
+  {
+    intervalCounterRelay = now;
+
+
+    bool relayState = getRelay();
+    iot.publish("undiknas/ti/kelompok2/relay/state", String(relayState));
+  }
+
+
+  if( (now - intervalCounterSensor) > 5000)
+  {
+    intervalCounterSensor = now;
+
+
+    float suhu = getAmbientTemperature();
+    iot.publish("undiknas/ti/kelompok2/sensor/suhu", String(suhu));
+  } 
+  
+  iot.loop();
+}
+
